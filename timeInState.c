@@ -18,9 +18,6 @@
 #include <linux/bpf.h>
 #include <stdbool.h>
 
-#include <bpf/bpf_core_read.h>
-#include <bpf/bpf_helpers.h>
-
 #include <android_bpf_defs.h>
 #include <bpf_timeinstate.h>
 #include <private/android_filesystem_config.h>
@@ -254,18 +251,21 @@ DEFINE_BPF_PROG("tracepoint/power/cpu_frequency", AID_ROOT, AID_SYSTEM,
     return ALLOW;
 }
 
-struct task_struct {
+// The format of the sched/sched_process_free event is described in
+// adb shell cat /d/tracing/events/sched/sched_process_free/format
+struct sched_process_free_args {
+    unsigned long long ignore;
+    char comm[16];
     pid_t pid;
-} __attribute__((preserve_access_index));
+    int prio;
+};
 
-DEFINE_BPF_PROG("raw_tp/sched_process_free", AID_ROOT, AID_SYSTEM,
+DEFINE_BPF_PROG("tracepoint/sched/sched_process_free", AID_ROOT, AID_SYSTEM,
                 tracepoint_sched_sched_process_free)
-(struct bpf_raw_tracepoint_args* ctx) {
+(struct sched_process_free_args* args) {
     const int ALLOW = 1;
 
-    // TP_PROTO(struct task_struct *p)
-    struct task_struct* p = (void*)ctx->args[0];
-    int pid = BPF_CORE_READ(p, pid);
+    int pid = args->pid;
     bool is_last = true;
 
     // eBPF verifier does not currently allow loops.
