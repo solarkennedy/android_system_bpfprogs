@@ -30,6 +30,8 @@ license {
 libbpf_prog {
     name: "timeInState.bpf",
     srcs: ["timeInState.c"],
+    // -mcpu=v2: the 4.19 verifier rejects BPF_JMP32 (v3, kernel 5.1+) with EINVAL
+    cflags: ["-mcpu=v2"],
     header_libs: [
         "bpf_prog_headers",
         "libcutils_headers",
